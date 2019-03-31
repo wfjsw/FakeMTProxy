@@ -20,6 +20,24 @@ parser.addArgument(
     }
 )
 
+parser.addArgument(
+    ['-ps', '--simulateServerPadding'],
+    {
+        help: 'Simulate Server-side req_pq Padding',
+        action: 'storeTrue',
+        nargs: 0
+    }
+)
+
+parser.addArgument(
+    ['-psl', '--simulateServerPaddingLarge'],
+    {
+        help: 'Simulate Server-side req_pq Padding (Large)',
+        action: 'storeTrue',
+        nargs: 0
+    }
+)
+
 parser.addArgument('type', {
     help: 'Working type',
     choices: ['client', 'server']
@@ -45,7 +63,7 @@ if (args.type === 'client') {
 }
 
 function handleClient(args) {
-    const { host, port, secret, simulateReqPq, protocol } = args
+    const { host, port, secret, simulateReqPq, protocol, simulateServerPadding, simulateServerPaddingLarge } = args
     const secbin = Buffer.from(secret, 'hex')
 
     const encprekey = crypto.randomBytes(32)
@@ -95,7 +113,9 @@ function handleClient(args) {
         
         let msg
         if (simulateReqPq) {
-            msg = Buffer.concat([Buffer.from('1400000078974660', 'hex'), crypto.randomBytes(16)])
+            const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+            const length = simulateServerPadding ? 16 + padding_length - padding_length % 4 : 16
+            msg = Buffer.concat([Buffer.from('1400000078974660', 'hex'), crypto.randomBytes(length)])
             console.log('Compositing req_pq')
         } else {
             const msg_length = Math.floor(Math.random() * 2048) + 32
@@ -167,10 +187,14 @@ function handleClient(args) {
 
         let msg
         if (res_str.indexOf('4000000063241605') > -1) {
-            msg = Buffer.concat([Buffer.from('40010000BEE412D7', 'hex'), crypto.randomBytes(316)])
+            const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+            const length = simulateServerPadding ? 316 + padding_length - padding_length % 4 : 316
+            msg = Buffer.concat([Buffer.from('40010000BEE412D7', 'hex'), crypto.randomBytes(length)])
             console.log('Received res_pq, Compositing req_DH_params')
         } else if (res_str.indexOf('780200005c07e8d0') > -1) {
-            msg = Buffer.concat([Buffer.from('780100001F5F04F5', 'hex'), crypto.randomBytes(372)])
+            const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+            const length = simulateServerPadding ? 372 + padding_length - padding_length % 4 : 372
+            msg = Buffer.concat([Buffer.from('780100001F5F04F5', 'hex'), crypto.randomBytes(length)])
             console.log('Received server_DH_params_ok, Compositing set_client_DH_params')
         } else {
             if (res_str.indexOf('3400000034f7cb3b') > -1) console.log('Received dh_gen_ok')
@@ -238,8 +262,8 @@ function handleClient(args) {
 
 }
 
-async function handleServer(args) {
-    const { host, port, secret } = args
+function handleServer(args) {
+    const { host, port, secret, simulateServerPadding, simulateServerPaddingLarge } = args
     const secbin = Buffer.from(secret, 'hex')
 
     const server = net.createServer(socket => {
@@ -315,13 +339,19 @@ async function handleServer(args) {
 
             let msg
             if (res_str.indexOf('1400000078974660') > -1) {
-                msg = Buffer.concat([Buffer.from('4000000063241605', 'hex'), crypto.randomBytes(60)])
+                const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+                const length = simulateServerPadding ? 60 + padding_length - padding_length % 4 : 60
+                msg = Buffer.concat([Buffer.from('4000000063241605', 'hex'), crypto.randomBytes(length)])
                 console.log('Received req_pq, Compositing res_pq')
             } else if (res_str.indexOf('40010000bee412d7') > -1) {
-                msg = Buffer.concat([Buffer.from('780200005C07E8D0', 'hex'), crypto.randomBytes(628)])
+                const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+                const length = simulateServerPadding ? 628 + padding_length - padding_length % 4 : 628
+                msg = Buffer.concat([Buffer.from('780200005C07E8D0', 'hex'), crypto.randomBytes(length)])
                 console.log('Received req_DH_params, Compositing server_DH_params_ok')
             } else if (res_str.indexOf('780100001f5f04f5') > -1) {
-                msg = Buffer.concat([Buffer.from('3400000034F7CB3B', 'hex'), crypto.randomBytes(48)])
+                const padding_length = simulateServerPaddingLarge ? Math.floor(Math.random() * 256) : Math.floor(Math.random() * 16)
+                const length = simulateServerPadding ? 48 + padding_length - padding_length % 4 : 48
+                msg = Buffer.concat([Buffer.from('3400000034F7CB3B', 'hex'), crypto.randomBytes(length)])
                 console.log('Received set_client_DH_params, Compositing dh_gen_ok')
             } else {
                 const msg_length = Math.floor(Math.random() * 2048) + 32
